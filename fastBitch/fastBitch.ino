@@ -44,8 +44,22 @@ void loop()
   
   simpleLineFollow(leftValue, middleValue, rightValue);
 }
+
+/**
+ * Writes either a digital or analog value to the motors, a negative speed results in 
+ *
+ * This function takes four integers as arguments and returns nothing.
+ *
+ * @param spd The speed for the analog write, negative spd results in digital write
+ * @param pin_IN1 The first pin for the digital write.
+ * @param pin_IN2 The second pin for the digital write
+ * @param pin_PWM The pin for analog write
+ * @return nothing!!!!
+ */
+
 void motorWrite(int spd, int pin_IN1 , int pin_IN2 , int pin_PWM)
 {
+  //TODO: figure out if this digital speed is the same as max
 if (spd < 0)
 {
 digitalWrite(pin_IN1 , HIGH); // go one way
@@ -56,16 +70,26 @@ else
 digitalWrite(pin_IN1 , LOW); // go the other way
 digitalWrite(pin_IN2 , HIGH);
 }
+// TODO: figure out speed range with analog write
 analogWrite(pin_PWM , abs(spd));
 }
 
-// your drive() function goes here!
+/**
+ * This is simply motorWrite called twice with the known pins taken care of
+ *
+ * This function takes two integers as arguments and returns nothing.
+ *
+ * @param speedL The speed for the left motor
+ * @param pin_IN1 The speed for the right motor
+ * @return nothing!!!!
+ */
 void drive(int speedL, int speedR) {
     motorWrite(speedR, AIN1, AIN2, PWMA);
     motorWrite(speedL, BIN1, BIN2, PWMB);
 }
 
 void sensorTest() {
+  // TODO: change this to parameter of a list of sensors, this will make it more verssatile and can choose to test specific sensors
   int leftValue = analogRead(LeftSensor);
   int middleValue = analogRead(MiddleSensor);
   int rightValue = analogRead(RightSensor);
@@ -85,14 +109,19 @@ void sensorTest() {
 }
 
 void simpleLineFollow(int left, int middle, int right) {
+  // TODO: move these variables somewhere else, they dont need to be redeclared everytime
   int a = 1;
   int b = 2;
   int c = 100;
  
+  // TODO: we should come up with some way to train the unknown variables
+  // TODO: these variables could be different depending on stuff like sharp turns and stuff. We should make state based machine for these variables for different sections
+  // This is the value function
   int rightMotor = c + a*middle + b*left;
   int leftMotor = c + a*middle + b*right;
 
   drive(leftMotor, rightMotor);
+  // TODO: the code bellow is for digital write, we should remove later
   /*
   if (leftValue == middleValue && middleValue == rightValue) { // check if all black or all white
     drive(100, 100); // drive forward

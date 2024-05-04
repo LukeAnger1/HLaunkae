@@ -14,7 +14,14 @@ const int MiddleSensor = A6;
 const int RightSensor = A7;
 
 // TODO: change this to get more information
-const int threshold = 500; // If it is less than this threshold it is white
+const int white_threshold = 100; // If it is less than this threshold it is white
+const int threshold = 450; // This is the threshold hold for digital
+const int black_threshold = 800; // if it is more than this threshold it is black
+
+// IMPORTANT TODO: find the min and max speed
+const int MIN_SPEED = 0;
+const int SET_SPEED = 100;
+const int MAX_SPEED = 100;
 
 void setup()
 {
@@ -26,6 +33,7 @@ pinMode(BIN1 , OUTPUT);
 pinMode(BIN2 , OUTPUT);
 pinMode(PWMB , OUTPUT);
 pinMode(STDBY , OUTPUT);
+// TODO: I forgot to add in the pin mode code for INPUT, but it ran so test this later
 digitalWrite(STDBY , HIGH);
 
 // TODO: remove print statements at the end
@@ -142,4 +150,65 @@ void simpleLineFollow(int left, int middle, int right) {
   if (leftValue == 1 && middleValue == 0 && rightValue == 0) { // check if all black or all white
     drive(150, 0); // hard left
   }*/
+}
+
+// TODO: move this later
+int lastError = 0;
+
+void PID(int left, int middle, int right) {
+  // TODO: move these
+  int KP = 1;
+  int KD = 1;
+
+  // This will constrain the readings
+  left = constrain(left, white_threshold, black_threshold);
+  middle = constrain(middle, white_threshold, black_threshold);
+  right = constrain(right, white_threshold, black_threshold);
+
+  // TODO: change this if to be more efficient
+  int error;
+  if (left == white_threshold && right == white_threshold) {
+    error = 0;
+  } else {
+    // this sets the sign of the middle in value function
+    // NOTE: this may be backwards sign notation
+    int middle_sign;
+    if (left > right) {
+      middle_sign = -1;
+    } else {
+      middle_sign = 1;
+    }
+    error = 2 * left + middle_sign * middle - 2 * right;
+  }
+
+  // NOTE: this is the begining of the old code for reference
+  // Take a reading
+  // unsigned int linePos = qtrSensors.readLine(sensorValues);
+
+  // Compute the error
+  // int error = SETPOINT - linePos;
+  // NOTE: this is the end of the old code for reference
+
+  // TODO: may want to include another derivative 
+  // Compute the motor adjustment
+  int adjust = error*KP + KD*(error - lastError);
+
+  // Record the current error for the next iteration
+  lastError = error;
+
+  // Adjust motors, one negatively and one positively
+  drive(constrain(SET_SPEED - adjust, MIN_SPEED, MAX_SPEED), constrain(SET_SPEED + adjust, MIN_SPEED, MAX_SPEED));
+}
+
+int constrain(int value, int min, int max) {
+  // this function makes sure the value is inbetween the given constriants
+  if (value < min) {
+    return min;
+  }
+
+  if (value > max) {
+    return max;
+  }
+
+  return value;
 }

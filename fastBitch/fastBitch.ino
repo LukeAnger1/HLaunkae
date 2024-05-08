@@ -43,7 +43,7 @@ Serial.begin(9600); // open the serial port at 9600 bps:
 void loop()
 {
   // put your main code here, to run repeatedly:
-  //drive(0,200); // this makes the left motor be the only one to turn
+
   // sensorTest();
 
   // TODO: optimize this reading code
@@ -132,27 +132,6 @@ void simpleLineFollow(int left, int middle, int right) {
   int leftMotor = c + a*middle + b*right;
 
   drive(leftMotor, rightMotor);
-  // TODO: the code bellow is for digital write, we should remove later
-  /*
-  if (leftValue == middleValue && middleValue == rightValue) { // check if all black or all white
-    drive(100, 100); // drive forward
-  }
-
-  if (leftValue == 0 && middleValue == 1 && rightValue == 1) { // check if all black or all white
-    drive(50, 100); // slight right
-  }
-
-  if (leftValue == 0 && middleValue == 0 && rightValue == 1) { // check if all black or all white
-    drive(0, 150); // hard right
-  }
-
-  if (leftValue == 1 && middleValue == 1 && rightValue == 0) { // check if all black or all white
-    drive(100, 50); // slight left
-  }
-
-  if (leftValue == 1 && middleValue == 0 && rightValue == 0) { // check if all black or all white
-    drive(150, 0); // hard left
-  }*/
 }
 
 // TODO: move this later
@@ -160,7 +139,7 @@ int lastError = 0;
 
 void PID(int left, int middle, int right) {
   // TODO: move these
-  const int KP = 85;
+  const int KP = 85; // GHOST VARIABLES
   const int KD = 1;
 
   // This will constrain the readings
@@ -181,19 +160,9 @@ void PID(int left, int middle, int right) {
     } else {
       middle_sign = 1;
     }
-    error = 2 * left + middle_sign * middle - 2 * right;
+    error = 2 * left + middle_sign * middle - 2 * right; // GHOST VARIABLES
   }
 
-  // NOTE: this is the begining of the old code for reference
-  // Take a reading
-  // unsigned int linePos = qtrSensors.readLine(sensorValues);
-
-  // Compute the error
-  // int error = SETPOINT - linePos;
-  // NOTE: this is the end of the old code for reference
-
-  // TODO: may want to include another derivative 
-  // Compute the motor adjustment
   int adjust = error*KP + KD*(error - lastError);
 
   // Record the current error for the next iteration

@@ -20,8 +20,8 @@ const int black_threshold = 800; // if it is more than this threshold it is blac
 
 // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
 // 0-255 for write value, 0 - 1023 for read value
-const int MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
-const int SET_SPEED = 200;
+const int MIN_SPEED = -100; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+const int SET_SPEED = 255;
 const int MAX_SPEED = 255;
 
 void setup()
@@ -140,7 +140,7 @@ int lastError = 0;
 void PID(int left, int middle, int right) {
   // TODO: move these
   const int KP = 85; // GHOST VARIABLES
-  const int KD = 1;
+  const int KD = 5;
 
   // This will constrain the readings
   left = constrain(left, white_threshold, black_threshold);
@@ -163,7 +163,7 @@ void PID(int left, int middle, int right) {
     error = 2 * left + middle_sign * middle - 2 * right; // GHOST VARIABLES
   }
 
-  int adjust = error*KP + KD*(error - lastError);
+  int adjust = error*KP - KD*(error - lastError);
 
   // Record the current error for the next iteration
   lastError = error;

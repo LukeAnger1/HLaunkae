@@ -164,9 +164,9 @@ void PID(int left, int middle, int right) {
   const int KD = 1;
 
   // This will constrain the readings
-  left = constrainy(left, white_threshold, black_threshold);
-  middle = constrainy(middle, white_threshold, black_threshold);
-  right = constrainy(right, white_threshold, black_threshold);
+  left = constrain(left, white_threshold, black_threshold);
+  middle = constrain(middle, white_threshold, black_threshold);
+  right = constrain(right, white_threshold, black_threshold);
 
   // TODO: change this if to be more efficient
   int error;
@@ -200,18 +200,5 @@ void PID(int left, int middle, int right) {
   lastError = error;
 
   // Adjust motors, one negatively and one positivelya
-  drive(constrainy(SET_SPEED - adjust, MIN_SPEED, MAX_SPEED), constrain(SET_SPEED + adjust, MIN_SPEED, MAX_SPEED));
-}
-
-int constrainy(int value, int miny, int maxy) {
-  // this function makes sure the value is inbetween the given constriants
-  if (value < miny) {
-    return miny;
-  }
-
-  if (value > maxy) {
-    return maxy;
-  }
-
-  return value;
+  drive(constrain(SET_SPEED - adjust, MIN_SPEED, MAX_SPEED), constrain(SET_SPEED + adjust, MIN_SPEED, MAX_SPEED));
 }

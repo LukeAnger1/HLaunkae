@@ -18,10 +18,11 @@ const int white_threshold = 100; // If it is less than this threshold it is whit
 const int threshold = 450; // This is the threshold hold for digital
 const int black_threshold = 800; // if it is more than this threshold it is black
 
-// IMPORTANT TODO: find the min and max speed
-const int MIN_SPEED = 0;
-const int SET_SPEED = 100;
-const int MAX_SPEED = 100;
+// Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
+// 0-255 for write value, 0 - 1023 for read value
+const int MIN_SPEED = 200; // TODO: this helps control how fast can turn, the lower the more the turn
+const int SET_SPEED = 255;
+const int MAX_SPEED = 255;
 
 void setup()
 {
@@ -49,8 +50,10 @@ void loop()
   int leftValue = analogRead(LeftSensor);
   int middleValue = analogRead(MiddleSensor);
   int rightValue = analogRead(RightSensor);
-  
-  simpleLineFollow(leftValue, middleValue, rightValue);
+
+  // different methods for line following
+  // simpleLineFollow(leftValue, middleValue, rightValue);
+  PID(leftValue, middleValue, rightValue);
 }
 
 /**
@@ -157,8 +160,8 @@ int lastError = 0;
 
 void PID(int left, int middle, int right) {
   // TODO: move these
-  int KP = 1;
-  int KD = 1;
+  const int KP = 10;
+  const int KD = 1;
 
   // This will constrain the readings
   left = constrainy(left, white_threshold, black_threshold);

@@ -22,9 +22,27 @@ const int black_threshold = 800; // if it is more than this threshold it is blac
 
 // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
 // 0-255 for write value, 0 - 1023 for read value
-const int MIN_SPEED = -100; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+const int MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
 const int SET_SPEED = 255;
 const int MAX_SPEED = 255;
+
+// IMPORTANT TODO: include min/max speed
+// Define states
+typedef enum {
+    STATE_INITIAL,
+    STATE_HUG_LEFT,
+    STATE_HUG_RIGHT,
+    STATE_LESS_CURVE_HUG_LEFT,
+    STATE_LESS_CURVE_HUG_RIGHT
+} State;
+
+// Define state machine structure
+typedef struct {
+    State currentState;
+    int KP;
+    int KD;
+    int stateCount;
+} StateMachine;
 
 // State machine is global variable
 StateMachine sm;
@@ -151,8 +169,8 @@ int lastError = 0;
 
 void PID(int left, int middle, int right) {
   
-  int KP = sm->KP;
-  int KD = sm->KD;
+  int KP = sm.KP;
+  int KD = sm.KD;
 
   // This will constrain the readings
   left = constrain(left, white_threshold, black_threshold);
@@ -185,23 +203,6 @@ void PID(int left, int middle, int right) {
 }
 
 // This is state machine code
-// IMPORTANT TODO: include min/max speed
-// Define states
-typedef enum {
-    STATE_INITIAL,
-    STATE_HUG_LEFT,
-    STATE_HUG_RIGHT,
-    STATE_LESS_CURVE_HUG_LEFT,
-    STATE_LESS_CURVE_HUG_RIGHT
-} State;
-
-// Define state machine structure
-typedef struct {
-    State currentState;
-    int KP;
-    int KD;
-    int stateCount;
-} StateMachine;
 
 void stateTransition(StateMachine *sm) {
     switch (sm->currentState) {
@@ -245,4 +246,3 @@ void stateTransition(StateMachine *sm) {
             break;
     }
 }
-

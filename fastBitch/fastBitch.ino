@@ -20,12 +20,6 @@ const int white_threshold = 100; // If it is less than this threshold it is whit
 const int threshold = 450; // This is the threshold hold for digital
 const int black_threshold = 800; // if it is more than this threshold it is black
 
-// Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
-// 0-255 for write value, 0 - 1023 for read value
-const int MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
-const int SET_SPEED = 255;
-const int MAX_SPEED = 255;
-
 // IMPORTANT TODO: include min/max speed
 // Define states
 typedef enum {
@@ -38,10 +32,13 @@ typedef enum {
 
 // Define state machine structure
 typedef struct {
-    State currentState;
-    int KP;
-    int KD;
-    int stateCount;
+  State currentState;
+  int KP;
+  int KD;
+  int stateCount;
+  int MIN_SPEED;
+  int SET_SPEED;
+  int MAX_SPEED;
 } StateMachine;
 
 // State machine is global variable
@@ -199,7 +196,7 @@ void PID(int left, int middle, int right) {
   lastError = error;
 
   // Adjust motors, one negatively and one positivelya
-  drive(constrain(SET_SPEED - adjust, MIN_SPEED, MAX_SPEED), constrain(SET_SPEED + adjust, MIN_SPEED, MAX_SPEED));
+  drive(constrain(sm.SET_SPEED - adjust, sm.MIN_SPEED, sm.MAX_SPEED), constrain(sm.SET_SPEED + adjust, sm.MIN_SPEED, sm.MAX_SPEED));
 }
 
 // This is state machine code
@@ -210,6 +207,11 @@ void stateTransition(StateMachine *sm) {
             // Initial state logic
             sm->KP = 85;
             sm->KD = 5;
+            // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
+            // 0-255 for write value, 0 - 1023 for read value
+            sm->MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            sm->SET_SPEED = 255;
+            sm->MAX_SPEED = 255;
             sm->stateCount ++;
             break;
         case STATE_HUG_LEFT:

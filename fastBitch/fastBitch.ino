@@ -177,17 +177,20 @@ void PID(int left, int middle, int right) {
   // TODO: change this if to be more efficient
   int error;
   if (left == white_threshold && right == white_threshold) {
-    error = 0;
+    error = -200; // IMPORTANT TODO: favor right
   } else {
     // this sets the sign of the middle in value function
     // NOTE: this may be backwards sign notation
-    int middle_sign;
+    int middle_sign = -1;
     if (left > right) {
       middle_sign = -1;
     } else {
       middle_sign = 1;
     }
-    error = 2 * left + middle_sign * middle - 2 * right; // GHOST VARIABLES
+    // TODO: implementing code to hug the right, should be in state machine
+    // straight state error = 2 * left + middle_sign * middle - 2 * right;
+    // favor right state
+    error = middle_sign * middle - right; // GHOST VARIABLES
   }
 
   int adjust = error*KP - KD*(error - lastError);

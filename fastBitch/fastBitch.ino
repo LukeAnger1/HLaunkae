@@ -1,5 +1,7 @@
 // I worked with Bruce Willis, that guy from Modern Family, Ryan Reynolds left shoe, Tobey Macguire, and batman to write this code
 
+#include <stdio.h>
+
 // Pololu #713 motor driver pin assignments
 const int PWMA=11; // Pololu drive A
 const int AIN2=10;
@@ -24,21 +26,28 @@ const int MIN_SPEED = -100; // IMPORTANT NOTE: this helps control how fast can t
 const int SET_SPEED = 255;
 const int MAX_SPEED = 255;
 
+// State machine is global variable
+StateMachine sm;
+
 void setup()
 {
   // put your setup code here, to run once:
-pinMode(PWMA , OUTPUT);
-pinMode(AIN1 , OUTPUT);
-pinMode(AIN2 , OUTPUT);
-pinMode(BIN1 , OUTPUT);
-pinMode(BIN2 , OUTPUT);
-pinMode(PWMB , OUTPUT);
-pinMode(STDBY , OUTPUT);
-// TODO: I forgot to add in the pin mode code for INPUT, but it ran so test this later
-digitalWrite(STDBY , HIGH);
+  pinMode(PWMA , OUTPUT);
+  pinMode(AIN1 , OUTPUT);
+  pinMode(AIN2 , OUTPUT);
+  pinMode(BIN1 , OUTPUT);
+  pinMode(BIN2 , OUTPUT);
+  pinMode(PWMB , OUTPUT);
+  pinMode(STDBY , OUTPUT);
+  // TODO: I forgot to add in the pin mode code for INPUT, but it ran so test this later
+  digitalWrite(STDBY , HIGH);
 
-// TODO: remove print statements at the end
-Serial.begin(9600); // open the serial port at 9600 bps:
+  // TODO: remove print statements at the end
+  Serial.begin(9600); // open the serial port at 9600 bps:
+
+  // Initialize state machine
+  sm = {STATE_INITIAL, 0, 0, 0};
+  stateTransition(&sm);
 }
 void loop()
 {
@@ -54,6 +63,9 @@ void loop()
   // different methods for line following
   // simpleLineFollow(leftValue, middleValue, rightValue);
   PID(leftValue, middleValue, rightValue);
+
+  // Transition the state in the statemachine
+  stateTransition(&sm);
 }
 
 /**
@@ -138,9 +150,9 @@ void simpleLineFollow(int left, int middle, int right) {
 int lastError = 0;
 
 void PID(int left, int middle, int right) {
-  // TODO: move these
-  const int KP = 85; // GHOST VARIABLES
-  const int KD = 5;
+  
+  int KP = sm->KP;
+  int KD = sm->KD;
 
   // This will constrain the readings
   left = constrain(left, white_threshold, black_threshold);
@@ -171,3 +183,66 @@ void PID(int left, int middle, int right) {
   // Adjust motors, one negatively and one positivelya
   drive(constrain(SET_SPEED - adjust, MIN_SPEED, MAX_SPEED), constrain(SET_SPEED + adjust, MIN_SPEED, MAX_SPEED));
 }
+
+// This is state machine code
+// IMPORTANT TODO: include min/max speed
+// Define states
+typedef enum {
+    STATE_INITIAL,
+    STATE_HUG_LEFT,
+    STATE_HUG_RIGHT,
+    STATE_LESS_CURVE_HUG_LEFT,
+    STATE_LESS_CURVE_HUG_RIGHT
+} State;
+
+// Define state machine structure
+typedef struct {
+    State currentState;
+    int KP;
+    int KD;
+    int stateCount;
+} StateMachine;
+
+void stateTransition(StateMachine *sm) {
+    switch (sm->currentState) {
+        case STATE_INITIAL:
+            // Initial state logic
+            sm->KP = 85;
+            sm->KD = 5;
+            sm->stateCount ++;
+            break;
+        case STATE_HUG_LEFT:
+            // State to hug the left for sharp left turns
+            sm->KP = 85;
+            sm->KD = 5;
+            sm->stateCount ++;
+            // IMPORTANT TODO: implement transition of states
+            // sm->currentState = STATE_TWO;  // Transition to next state
+            break;
+        case STATE_HUG_RIGHT:
+            // State to hug the right for sharp right turns
+            sm->KP = 85;
+            sm->KD = 5;
+            sm->stateCount ++;
+            // sm->currentState = STATE_FINAL;  // Transition to final state
+            break;
+        case STATE_LESS_CURVE_HUG_LEFT:
+            // State to hug the left for minor left turns
+            sm->KP = 85;
+            sm->KD = 5;
+            sm->stateCount ++;
+       
+            break;
+        case STATE_LESS_CURVE_HUG_RIGHT:
+            // State to hug the right for minor right turns
+            sm->KP = 85;
+            sm->KD = 5;
+            sm->stateCount ++;
+            
+            break;
+        default:
+            printf("Invalid State\n");
+            break;
+    }
+}
+

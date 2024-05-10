@@ -213,7 +213,9 @@ void stateTransition(StateMachine *sm) {
     switch (sm->currentState) {
         // TODO: instead of setting values set state
         // 25 sec switch to straight
-        if ((millis() - initialTime) > 25000) {
+        unsigned long interval = 25000;
+        unsigned long currentTime = millis();
+        if ((currentTime - initialTime) > interval) {
           sm->currentState = STATE_INITIAL;
         }
         case STATE_INITIAL:

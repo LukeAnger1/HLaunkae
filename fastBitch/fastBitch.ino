@@ -76,6 +76,7 @@ void loop()
   // different methods for line following
   // simpleLineFollow(leftValue, middleValue, rightValue);
   PID(leftValue, middleValue, rightValue);
+  // sensorTest();
 
   // Transition the state in the statemachine
   stateTransition();
@@ -163,9 +164,6 @@ void simpleLineFollow(int left, int middle, int right) {
 int lastError = 0;
 
 void PID(int left, int middle, int right) {
-  
-  //int KP = sm.KP;
-  //int KD = sm.KD;
 
   // This will constrain the readings
   left = constrain(left, white_threshold, black_threshold);
@@ -179,22 +177,22 @@ void PID(int left, int middle, int right) {
   } else {
     // this sets the sign of the middle in value function
     // NOTE: this may be backwards sign notation
-    int middle_sign = -1;
+    /*int middle_sign = -1;
     if (left > right) {
       middle_sign = -1;
     } else {
       middle_sign = 1;
-    }
+    }*/
     // TODO: implementing code to hug the right, should be in state machine
     // straight state error = 2 * left + middle_sign * middle - 2 * right;
     // favor right state
-    error = left + middle_sign * middle - right; // GHOST VARIABLES
+    error = left - right; // GHOST VARIABLES
   }
 
   int adjust = error*KP - KD*(error - lastError);
 
   // Record the current error for the next iteration
-  lastError = error;
+  // lastError = error;
 
   // Adjust motors, one negatively and one positivelya
   drive(constrain(SET_SPEED - adjust, MIN_SPEED, MAX_SPEED), constrain(SET_SPEED + adjust, MIN_SPEED, MAX_SPEED));
@@ -204,9 +202,8 @@ unsigned long startTime = millis();
 
 // This is state machine code
 void stateTransition() {
-
+    // 47 sec next change
     unsigned long currentTime = millis();
-    unsigned long interval = 25000;
     if (currentTime - startTime > 37000) {
       currentState = STATE_HUG_RIGHT;
     } else if (currentTime - startTime > 25000) {
@@ -218,8 +215,8 @@ void stateTransition() {
     switch (currentState) {
         case STATE_INITIAL:
             // Initial state logic
-            KP = 85;
-            KD = 5;
+            KP = 20;
+            KD = 17;
             // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
             // 0-255 for write value, 0 - 1023 for read value
             MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
@@ -238,8 +235,8 @@ void stateTransition() {
             break;
         case STATE_HUG_RIGHT:
             // State to hug the right for sharp right turns
-            KP = 85;
-            KD = 5;
+            KP = 20;
+            KD = 17;
             MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
             SET_SPEED = 255;
             MAX_SPEED = 255;

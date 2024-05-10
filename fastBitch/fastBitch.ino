@@ -207,7 +207,9 @@ void stateTransition() {
 
     unsigned long currentTime = millis();
     unsigned long interval = 25000;
-    if (currentTime - startTime > interval) {
+    if (currentTime - startTime > 37000) {
+      currentState = STATE_HUG_RIGHT;
+    } else if (currentTime - startTime > 25000) {
       currentState = STATE_INITIAL;
     } else {
       currentState = STATE_HUG_RIGHT;

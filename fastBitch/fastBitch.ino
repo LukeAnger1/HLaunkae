@@ -27,7 +27,7 @@ typedef enum {
     STATE_HUG_LEFT,
     STATE_HUG_RIGHT,
     STATE_LESS_CURVE_HUG_LEFT,
-    STATE_LESS_CURVE_HUG_RIGHT
+    STATE_BEAR_HUG_RIGHT
 } State;
 
 // Define state machine structure
@@ -204,9 +204,13 @@ unsigned long startTime = millis();
 void stateTransition() {
     // 47 sec next change
     unsigned long currentTime = millis();
-    if (currentTime - startTime > 37000) {
+    if (currentTime - startTime > 24000) {
       currentState = STATE_HUG_RIGHT;
-    } else if (currentTime - startTime > 25000) {
+    } else if (currentTime - startTime > 22000) {
+      currentState = STATE_INITIAL;
+    } else if (currentTime - startTime > 15000) {
+      currentState = STATE_BEAR_HUG_RIGHT;
+    } else if (currentTime - startTime > 10000) {
       currentState = STATE_INITIAL;
     } else {
       currentState = STATE_HUG_RIGHT;
@@ -251,12 +255,16 @@ void stateTransition() {
             stateCount ++;
        
             break;
-        case STATE_LESS_CURVE_HUG_RIGHT:
+        case STATE_BEAR_HUG_RIGHT:
             // State to hug the right for minor right turns
-            KP = 85;
+            KP = 20;
             KD = 5;
+            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = -200;
             stateCount ++;
-            
+            // sm->currentState = STATE_FINAL;  // Transition to final state
             break;
         default:
             printf("Invalid State\n");

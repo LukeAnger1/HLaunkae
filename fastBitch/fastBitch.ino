@@ -26,7 +26,7 @@ typedef enum {
     STATE_INITIAL,
     STATE_HUG_LEFT,
     STATE_HUG_RIGHT,
-    STATE_LESS_CURVE_HUG_LEFT,
+    STATE_BEAR_HUG_LEFT,
     STATE_BEAR_HUG_RIGHT
 } State;
 
@@ -204,11 +204,13 @@ unsigned long startTime = millis();
 void stateTransition() {
     // 47 sec next change
     unsigned long currentTime = millis();
-    if (currentTime - startTime > 24000) {
+    if (currentTime - startTime > 27000) {
       currentState = STATE_HUG_RIGHT;
+    } else if (currentTime - startTime > 25500) {
+      currentState = STATE_BEAR_HUG_LEFT;
     } else if (currentTime - startTime > 22000) {
       currentState = STATE_INITIAL;
-    } else if (currentTime - startTime > 15000) {
+    } else if (currentTime - startTime > 17000) {
       currentState = STATE_BEAR_HUG_RIGHT;
     } else if (currentTime - startTime > 10000) {
       currentState = STATE_INITIAL;
@@ -220,7 +222,7 @@ void stateTransition() {
         case STATE_INITIAL:
             // Initial state logic
             KP = 20;
-            KD = 17;
+            KD = 18;
             // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
             // 0-255 for write value, 0 - 1023 for read value
             MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
@@ -231,11 +233,14 @@ void stateTransition() {
             break;
         case STATE_HUG_LEFT:
             // State to hug the left for sharp left turns
-            KP = 85;
-            KD = 5;
+            KP = 20;
+            KD = 17;
+            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = 200;
             stateCount ++;
-            // IMPORTANT TODO: implement transition of states
-            // sm->currentState = STATE_TWO;  // Transition to next state
+            // sm->currentState = STATE_FINAL;  // Transition to final state
             break;
         case STATE_HUG_RIGHT:
             // State to hug the right for sharp right turns
@@ -248,12 +253,16 @@ void stateTransition() {
             stateCount ++;
             // sm->currentState = STATE_FINAL;  // Transition to final state
             break;
-        case STATE_LESS_CURVE_HUG_LEFT:
+        case STATE_BEAR_HUG_LEFT:
             // State to hug the left for minor left turns
-            KP = 85;
+            KP = 20;
             KD = 5;
+            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = 200;
             stateCount ++;
-       
+            // sm->currentState = STATE_FINAL;  // Transition to final state
             break;
         case STATE_BEAR_HUG_RIGHT:
             // State to hug the right for minor right turns

@@ -47,6 +47,7 @@ typedef struct {
 
 // State machine is global variable
 StateMachine sm;
+unsigned long initialTime = millis();
 
 void setup()
 {
@@ -65,7 +66,7 @@ void setup()
   Serial.begin(9600); // open the serial port at 9600 bps:
 
   // Initialize state machine
-  sm = {STATE_INITIAL, 0, 0, 0};
+  sm = {STATE_HUG_RIGHT, 0, 0, 0};
   stateTransition(&sm);
 }
 void loop()
@@ -212,6 +213,9 @@ void stateTransition(StateMachine *sm) {
     switch (sm->currentState) {
         // TODO: instead of setting values set state
         // 25 sec switch to straight
+        if ((millis() - initialTime) > 25000) {
+          sm->currentState = STATE_INITIAL;
+        }
         case STATE_INITIAL:
             // Initial state logic
             sm->KP = 85;

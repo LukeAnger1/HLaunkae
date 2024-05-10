@@ -31,7 +31,7 @@ typedef enum {
 } State;
 
 // Define state machine structure
-typedef struct {
+
   State currentState;
   int KP;
   int KD;
@@ -39,15 +39,10 @@ typedef struct {
   int MIN_SPEED;
   int SET_SPEED;
   int MAX_SPEED;
-  int leftError;
-  int middleError;
-  int rightError;
   int defaultError;
-} StateMachine;
 
-// State machine is global variable
-StateMachine sm;
-unsigned long initialTime = millis();
+
+
 
 void setup()
 {
@@ -65,9 +60,7 @@ void setup()
   // TODO: remove print statements at the end
   Serial.begin(9600); // open the serial port at 9600 bps:
 
-  // Initialize state machine
-  sm = {STATE_HUG_RIGHT, 0, 0, 0};
-  stateTransition(&sm);
+currentState = STATE_INITIAL;
 }
 void loop()
 {
@@ -85,7 +78,7 @@ void loop()
   PID(leftValue, middleValue, rightValue);
 
   // Transition the state in the statemachine
-  stateTransition(&sm);
+  stateTransition();
 }
 
 /**
@@ -171,10 +164,8 @@ int lastError = 0;
 
 void PID(int left, int middle, int right) {
   
-  int KP = sm.KP;
-  int KD = sm.KD;
-
-  
+  //int KP = sm.KP;
+  //int KD = sm.KD;
 
   // This will constrain the readings
   left = constrain(left, white_threshold, black_threshold);
@@ -183,9 +174,8 @@ void PID(int left, int middle, int right) {
 
   // TODO: change this if to be more efficient
   int error;
-  
   if (left == white_threshold && right == white_threshold) {
-    error = sm.defaultError;
+    error = defaultError; // IMPORTANT TODO: favor right
   } else {
     // this sets the sign of the middle in value function
     // NOTE: this may be backwards sign notation
@@ -198,81 +188,75 @@ void PID(int left, int middle, int right) {
     // TODO: implementing code to hug the right, should be in state machine
     // straight state error = 2 * left + middle_sign * middle - 2 * right;
     // favor right state
-    error = sm.leftError * left + sm.middleError * middle_sign * middle - sm.rightError * right; // GHOST VARIABLES
+    error = left + middle_sign * middle - right; // GHOST VARIABLES
   }
 
   int adjust = error*KP - KD*(error - lastError);
 
   // Record the current error for the next iteration
   lastError = error;
-  Serial.print("the adjust is ");
-  Serial.print(adjust, DEC);
+
   // Adjust motors, one negatively and one positivelya
-  drive(constrain(sm.SET_SPEED - adjust, sm.MIN_SPEED, sm.MAX_SPEED), constrain(sm.SET_SPEED + adjust, sm.MIN_SPEED, sm.MAX_SPEED));
+  drive(constrain(SET_SPEED - adjust, MIN_SPEED, MAX_SPEED), constrain(SET_SPEED + adjust, MIN_SPEED, MAX_SPEED));
 }
 
-// This is state machine code
+unsigned long startTime = millis();
 
-void stateTransition(StateMachine *sm) {
-    switch (sm->currentState) {
-        // TODO: instead of setting values set state
-        // 25 sec switch to straight
-        unsigned long interval = 25000;
-        unsigned long currentTime = millis();
-        if ((currentTime - initialTime) > interval) {
-          sm->currentState = STATE_INITIAL;
-          return;
-        }
+// This is state machine code
+void stateTransition() {
+
+    unsigned long currentTime = millis();
+    unsigned long interval = 25000;
+    if (currentTime - startTime > interval) {
+      currentState = STATE_INITIAL;
+    } else {
+      currentState = STATE_HUG_RIGHT;
+    }
+  
+    switch (currentState) {
         case STATE_INITIAL:
             // Initial state logic
-            sm->KP = 85;
-            sm->KD = 5;
-            sm->leftError = 2;
-            sm->middleError = 1;
-            sm->rightError = 2;
-            sm->defaultError = 0;
+            KP = 85;
+            KD = 5;
             // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
             // 0-255 for write value, 0 - 1023 for read value
-            sm->MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
-            sm->SET_SPEED = 255;
-            sm->MAX_SPEED = 255;
-            sm->stateCount ++;
+            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = 0;
+            stateCount ++;
             break;
         case STATE_HUG_LEFT:
             // State to hug the left for sharp left turns
-            sm->KP = 85;
-            sm->KD = 5;
-            sm->stateCount ++;
+            KP = 85;
+            KD = 5;
+            stateCount ++;
             // IMPORTANT TODO: implement transition of states
             // sm->currentState = STATE_TWO;  // Transition to next state
             break;
         case STATE_HUG_RIGHT:
             // State to hug the right for sharp right turns
-            sm->KP = 85;
-            sm->KD = 5;
-            sm->leftError = 0;
-            sm->middleError = 1;
-            sm->rightError = 1;
-            sm->defaultError = -200;
-            // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
-            // 0-255 for write value, 0 - 1023 for read value
-            sm->MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
-            sm->SET_SPEED = 255;
-            sm->MAX_SPEED = 255;
-            sm->stateCount ++;
+            KP = 85;
+            KD = 5;
+            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = -200;
+            stateCount ++;
+            // sm->currentState = STATE_FINAL;  // Transition to final state
             break;
         case STATE_LESS_CURVE_HUG_LEFT:
             // State to hug the left for minor left turns
-            sm->KP = 85;
-            sm->KD = 5;
-            sm->stateCount ++;
+            KP = 85;
+            KD = 5;
+            stateCount ++;
        
             break;
         case STATE_LESS_CURVE_HUG_RIGHT:
             // State to hug the right for minor right turns
-            sm->KP = 85;
-            sm->KD = 5;
-            sm->stateCount ++;
+            KP = 85;
+            KD = 5;
+            stateCount ++;
             
             break;
         default:

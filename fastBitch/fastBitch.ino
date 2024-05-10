@@ -39,6 +39,10 @@ typedef struct {
   int MIN_SPEED;
   int SET_SPEED;
   int MAX_SPEED;
+  int leftError;
+  int middleError;
+  int rightError;
+  int defaultError;
 } StateMachine;
 
 // State machine is global variable
@@ -177,7 +181,7 @@ void PID(int left, int middle, int right) {
   // TODO: change this if to be more efficient
   int error;
   if (left == white_threshold && right == white_threshold) {
-    error = -200; // IMPORTANT TODO: favor right
+    error = sm.defaultError;
   } else {
     // this sets the sign of the middle in value function
     // NOTE: this may be backwards sign notation
@@ -190,7 +194,7 @@ void PID(int left, int middle, int right) {
     // TODO: implementing code to hug the right, should be in state machine
     // straight state error = 2 * left + middle_sign * middle - 2 * right;
     // favor right state
-    error = middle_sign * middle - right; // GHOST VARIABLES
+    error = sm.leftError * left + sm.middleError * middle_sign * middle - sm.rightError * right; // GHOST VARIABLES
   }
 
   int adjust = error*KP - KD*(error - lastError);
@@ -206,10 +210,16 @@ void PID(int left, int middle, int right) {
 
 void stateTransition(StateMachine *sm) {
     switch (sm->currentState) {
+        // TODO: instead of setting values set state
+        // 25 sec switch to straight
         case STATE_INITIAL:
             // Initial state logic
             sm->KP = 85;
             sm->KD = 5;
+            sm->leftError = 2;
+            sm->middleError = 1;
+            sm->rightError = 2;
+            sm->defaultError = 0;
             // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
             // 0-255 for write value, 0 - 1023 for read value
             sm->MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
@@ -229,8 +239,16 @@ void stateTransition(StateMachine *sm) {
             // State to hug the right for sharp right turns
             sm->KP = 85;
             sm->KD = 5;
+            sm->leftError = 0;
+            sm->middleError = 1;
+            sm->rightError = 1;
+            sm->defaultError = -200;
+            // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
+            // 0-255 for write value, 0 - 1023 for read value
+            sm->MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            sm->SET_SPEED = 255;
+            sm->MAX_SPEED = 255;
             sm->stateCount ++;
-            // sm->currentState = STATE_FINAL;  // Transition to final state
             break;
         case STATE_LESS_CURVE_HUG_LEFT:
             // State to hug the left for minor left turns

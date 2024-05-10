@@ -174,7 +174,7 @@ void PID(int left, int middle, int right) {
   int KP = sm.KP;
   int KD = sm.KD;
 
-  Serial.print("here3");
+  
 
   // This will constrain the readings
   left = constrain(left, white_threshold, black_threshold);
@@ -183,7 +183,7 @@ void PID(int left, int middle, int right) {
 
   // TODO: change this if to be more efficient
   int error;
-  Serial.print("here2");
+  
   if (left == white_threshold && right == white_threshold) {
     error = sm.defaultError;
   } else {
@@ -205,7 +205,8 @@ void PID(int left, int middle, int right) {
 
   // Record the current error for the next iteration
   lastError = error;
-  Serial.print("here1");
+  Serial.print("the adjust is ");
+  Serial.print(adjust, DEC);
   // Adjust motors, one negatively and one positivelya
   drive(constrain(sm.SET_SPEED - adjust, sm.MIN_SPEED, sm.MAX_SPEED), constrain(sm.SET_SPEED + adjust, sm.MIN_SPEED, sm.MAX_SPEED));
 }

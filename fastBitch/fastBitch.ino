@@ -15,15 +15,13 @@ const int LeftSensor = A5;// sensors looking from the robots perspective
 const int MiddleSensor = A6;
 const int RightSensor = A7;
 
-// TODO: change this to get more information
 const int white_threshold = 100; // If it is less than this threshold it is white
 const int threshold = 450; // This is the threshold hold for digital
 const int black_threshold = 800; // if it is more than this threshold it is black
 
-// IMPORTANT TODO: include min/max speed
 // Define states
 typedef enum {
-    STATE_INITIAL,
+    STATE_STRAIGHT,
     STATE_HUG_LEFT,
     STATE_HUG_RIGHT,
     STATE_BEAR_HUG_LEFT,
@@ -31,15 +29,14 @@ typedef enum {
 } State;
 
 // Define state machine structure
-
-  State currentState;
-  int KP;
-  int KD;
-  int stateCount;
-  int MIN_SPEED;
-  int SET_SPEED;
-  int MAX_SPEED;
-  int defaultError;
+State currentState;
+int KP;
+int KD;
+int stateCount;
+int MIN_SPEED;
+int SET_SPEED;
+int MAX_SPEED;
+int defaultError;
 
 
 
@@ -55,20 +52,16 @@ void setup()
   pinMode(PWMB , OUTPUT);
   pinMode(STDBY , OUTPUT);
   // TODO: I forgot to add in the pin mode code for INPUT, but it ran so test this later
-  digitalWrite(STDBY , HIGH);
+  digitalWrite(STDBY , HIGH); // TODO: test removing this line
 
-  // TODO: remove print statements at the end
   Serial.begin(9600); // open the serial port at 9600 bps:
 
-currentState = STATE_INITIAL;
+currentState = STATE_STRAIGHT;
 }
 void loop()
 {
   // put your main code here, to run repeatedly:
 
-  // sensorTest();
-
-  // TODO: optimize this reading code
   int leftValue = analogRead(LeftSensor);
   int middleValue = analogRead(MiddleSensor);
   int rightValue = analogRead(RightSensor);
@@ -76,7 +69,6 @@ void loop()
   // different methods for line following
   // simpleLineFollow(leftValue, middleValue, rightValue);
   PID(leftValue, middleValue, rightValue);
-  // sensorTest();
 
   // Transition the state in the statemachine
   stateTransition();
@@ -96,7 +88,6 @@ void loop()
 
 void motorWrite(int spd, int pin_IN1 , int pin_IN2 , int pin_PWM)
 {
-  //TODO: figure out if this digital speed is the same as max
 if (spd < 0)
 {
 digitalWrite(pin_IN1 , HIGH); // go one way
@@ -107,7 +98,6 @@ else
 digitalWrite(pin_IN1 , LOW); // go the other way
 digitalWrite(pin_IN2 , HIGH);
 }
-// TODO: figure out speed range with analog write
 analogWrite(pin_PWM , abs(spd));
 }
 
@@ -126,7 +116,6 @@ void drive(int speedL, int speedR) {
 }
 
 void sensorTest() {
-  // TODO: change this to parameter of a list of sensors, this will make it more verssatile and can choose to test specific sensors
   int leftValue = analogRead(LeftSensor);
   int middleValue = analogRead(MiddleSensor);
   int rightValue = analogRead(RightSensor);
@@ -142,7 +131,7 @@ void sensorTest() {
   
   Serial.println(); // make a new line for readability
   
-  delay(2000);            // delay 200 milliseconds
+  delay(2000);            // delay 2 seconds
 }
 
 void simpleLineFollow(int left, int middle, int right) {
@@ -151,16 +140,14 @@ void simpleLineFollow(int left, int middle, int right) {
   int b = 2;
   int c = 100;
  
-  // TODO: we should come up with some way to train the unknown variables
-  // TODO: these variables could be different depending on stuff like sharp turns and stuff. We should make state based machine for these variables for different sections
-  // This is the value function
+// This is the value function
   int rightMotor = c + a*middle + b*left;
   int leftMotor = c + a*middle + b*right;
 
   drive(leftMotor, rightMotor);
 }
 
-// TODO: move this later
+// This is used for the derivative in PID
 int lastError = 0;
 
 void PID(int left, int middle, int right) {
@@ -175,7 +162,8 @@ void PID(int left, int middle, int right) {
   if (left == white_threshold && right == white_threshold) {
     error = defaultError; // IMPORTANT TODO: favor right
   } else {
-    // this sets the sign of the middle in value function
+
+    // TODO: this set the sign of the middle in value function, test it out
     // NOTE: this may be backwards sign notation
     /*int middle_sign = -1;
     if (left > right) {
@@ -183,14 +171,14 @@ void PID(int left, int middle, int right) {
     } else {
       middle_sign = 1;
     }*/
-    // TODO: implementing code to hug the right, should be in state machine
-    // straight state error = 2 * left + middle_sign * middle - 2 * right;
+
     // favor right state
-    error = left - right; // GHOST VARIABLES
+    error = left - right; // TODO: Ummm I removed the ghost variables here to weigh the different values but it works, so may need to remove unused variables later on
   }
 
   int adjust = error*KP - KD*(error - lastError);
 
+  // TODO: I commented this out but it is working alot better now, so I need to remove alot of variables
   // Record the current error for the next iteration
   // lastError = error;
 
@@ -202,78 +190,74 @@ unsigned long startTime = millis();
 
 // This is state machine code
 void stateTransition() {
-    // 47 sec next change
+    // This changes states based off the time
     unsigned long currentTime = millis();
     if (currentTime - startTime > 27000) {
       currentState = STATE_HUG_RIGHT;
     } else if (currentTime - startTime > 25500) {
       currentState = STATE_BEAR_HUG_LEFT;
     } else if (currentTime - startTime > 22000) {
-      currentState = STATE_INITIAL;
+      currentState = STATE_STRAIGHT;
     } else if (currentTime - startTime > 17000) {
       currentState = STATE_BEAR_HUG_RIGHT;
     } else if (currentTime - startTime > 10000) {
-      currentState = STATE_INITIAL;
+      currentState = STATE_STRAIGHT;
     } else {
       currentState = STATE_HUG_RIGHT;
     }
   
     switch (currentState) {
-        case STATE_INITIAL:
-            // Initial state logic
-            KP = 20;
-            KD = 18;
+        case STATE_STRAIGHT:
+            // Straight state logic
+            KP = 20; // This variable dictates how much to correct
+            KD = 18; // This is the derivative to make turning more smooth, but right now it isnt used correctly so may need to remove
             // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
             // 0-255 for write value, 0 - 1023 for read value
             MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
-            SET_SPEED = 255;
-            MAX_SPEED = 255;
-            defaultError = 0;
-            stateCount ++;
+            SET_SPEED = 255; // This is the goal speed
+            MAX_SPEED = 255; // This is the max speed
+            defaultError = 0; // This is what to do when there is only white, really good for sharp turns
+            stateCount ++; // This is to count how many state transitions have taken place, currently not used
             break;
         case STATE_HUG_LEFT:
             // State to hug the left for sharp left turns
             KP = 20;
             KD = 17;
-            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            MIN_SPEED = 0;
             SET_SPEED = 255;
             MAX_SPEED = 255;
             defaultError = 200;
             stateCount ++;
-            // sm->currentState = STATE_FINAL;  // Transition to final state
             break;
         case STATE_HUG_RIGHT:
             // State to hug the right for sharp right turns
             KP = 20;
             KD = 17;
-            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            MIN_SPEED = 0;
             SET_SPEED = 255;
             MAX_SPEED = 255;
             defaultError = -200;
             stateCount ++;
-            // sm->currentState = STATE_FINAL;  // Transition to final state
             break;
         case STATE_BEAR_HUG_LEFT:
             // State to hug the left for minor left turns
             KP = 20;
             KD = 5;
-            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            MIN_SPEED = 0;
             SET_SPEED = 255;
             MAX_SPEED = 255;
             defaultError = 200;
             stateCount ++;
-            // sm->currentState = STATE_FINAL;  // Transition to final state
             break;
         case STATE_BEAR_HUG_RIGHT:
             // State to hug the right for minor right turns
             KP = 20;
             KD = 5;
-            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            MIN_SPEED = 0;
             SET_SPEED = 255;
             MAX_SPEED = 255;
             defaultError = -200;
             stateCount ++;
-            // sm->currentState = STATE_FINAL;  // Transition to final state
             break;
         default:
             printf("Invalid State\n");

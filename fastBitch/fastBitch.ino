@@ -1,5 +1,7 @@
 // I worked with Bruce Willis, that guy from Modern Family, Ryan Reynolds left shoe, Tobey Macguire, and batman to write this code
 
+#include <stdio.h>
+
 // Pololu #713 motor driver pin assignments
 const int PWMA=11; // Pololu drive A
 const int AIN2=10;
@@ -18,27 +20,47 @@ const int white_threshold = 100; // If it is less than this threshold it is whit
 const int threshold = 450; // This is the threshold hold for digital
 const int black_threshold = 800; // if it is more than this threshold it is black
 
-// Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
-// 0-255 for write value, 0 - 1023 for read value
-const int MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
-const int SET_SPEED = 200;
-const int MAX_SPEED = 255;
+// IMPORTANT TODO: include min/max speed
+// Define states
+typedef enum {
+    STATE_INITIAL,
+    STATE_HUG_LEFT,
+    STATE_HUG_RIGHT,
+    STATE_BEAR_HUG_LEFT,
+    STATE_BEAR_HUG_RIGHT
+} State;
+
+// Define state machine structure
+
+  State currentState;
+  int KP;
+  int KD;
+  int stateCount;
+  int MIN_SPEED;
+  int SET_SPEED;
+  int MAX_SPEED;
+  int defaultError;
+
+
+
 
 void setup()
 {
   // put your setup code here, to run once:
-pinMode(PWMA , OUTPUT);
-pinMode(AIN1 , OUTPUT);
-pinMode(AIN2 , OUTPUT);
-pinMode(BIN1 , OUTPUT);
-pinMode(BIN2 , OUTPUT);
-pinMode(PWMB , OUTPUT);
-pinMode(STDBY , OUTPUT);
-// TODO: I forgot to add in the pin mode code for INPUT, but it ran so test this later
-digitalWrite(STDBY , HIGH);
+  pinMode(PWMA , OUTPUT);
+  pinMode(AIN1 , OUTPUT);
+  pinMode(AIN2 , OUTPUT);
+  pinMode(BIN1 , OUTPUT);
+  pinMode(BIN2 , OUTPUT);
+  pinMode(PWMB , OUTPUT);
+  pinMode(STDBY , OUTPUT);
+  // TODO: I forgot to add in the pin mode code for INPUT, but it ran so test this later
+  digitalWrite(STDBY , HIGH);
 
-// TODO: remove print statements at the end
-Serial.begin(9600); // open the serial port at 9600 bps:
+  // TODO: remove print statements at the end
+  Serial.begin(9600); // open the serial port at 9600 bps:
+
+currentState = STATE_INITIAL;
 }
 void loop()
 {
@@ -54,6 +76,10 @@ void loop()
   // different methods for line following
   // simpleLineFollow(leftValue, middleValue, rightValue);
   PID(leftValue, middleValue, rightValue);
+  // sensorTest();
+
+  // Transition the state in the statemachine
+  stateTransition();
 }
 
 /**
@@ -138,9 +164,6 @@ void simpleLineFollow(int left, int middle, int right) {
 int lastError = 0;
 
 void PID(int left, int middle, int right) {
-  // TODO: move these
-  const int KP = 85; // GHOST VARIABLES
-  const int KD = 1;
 
   // This will constrain the readings
   left = constrain(left, white_threshold, black_threshold);
@@ -150,24 +173,110 @@ void PID(int left, int middle, int right) {
   // TODO: change this if to be more efficient
   int error;
   if (left == white_threshold && right == white_threshold) {
-    error = 0;
+    error = defaultError; // IMPORTANT TODO: favor right
   } else {
     // this sets the sign of the middle in value function
     // NOTE: this may be backwards sign notation
-    int middle_sign;
+    /*int middle_sign = -1;
     if (left > right) {
       middle_sign = -1;
     } else {
       middle_sign = 1;
-    }
-    error = 2 * left + middle_sign * middle - 2 * right; // GHOST VARIABLES
+    }*/
+    // TODO: implementing code to hug the right, should be in state machine
+    // straight state error = 2 * left + middle_sign * middle - 2 * right;
+    // favor right state
+    error = left - right; // GHOST VARIABLES
   }
 
-  int adjust = error*KP + KD*(error - lastError);
+  int adjust = error*KP - KD*(error - lastError);
 
   // Record the current error for the next iteration
-  lastError = error;
+  // lastError = error;
 
   // Adjust motors, one negatively and one positivelya
   drive(constrain(SET_SPEED - adjust, MIN_SPEED, MAX_SPEED), constrain(SET_SPEED + adjust, MIN_SPEED, MAX_SPEED));
+}
+
+unsigned long startTime = millis();
+
+// This is state machine code
+void stateTransition() {
+    // 47 sec next change
+    unsigned long currentTime = millis();
+    if (currentTime - startTime > 27000) {
+      currentState = STATE_HUG_RIGHT;
+    } else if (currentTime - startTime > 25500) {
+      currentState = STATE_BEAR_HUG_LEFT;
+    } else if (currentTime - startTime > 22000) {
+      currentState = STATE_INITIAL;
+    } else if (currentTime - startTime > 17000) {
+      currentState = STATE_BEAR_HUG_RIGHT;
+    } else if (currentTime - startTime > 10000) {
+      currentState = STATE_INITIAL;
+    } else {
+      currentState = STATE_HUG_RIGHT;
+    }
+  
+    switch (currentState) {
+        case STATE_INITIAL:
+            // Initial state logic
+            KP = 20;
+            KD = 18;
+            // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
+            // 0-255 for write value, 0 - 1023 for read value
+            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = 0;
+            stateCount ++;
+            break;
+        case STATE_HUG_LEFT:
+            // State to hug the left for sharp left turns
+            KP = 20;
+            KD = 17;
+            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = 200;
+            stateCount ++;
+            // sm->currentState = STATE_FINAL;  // Transition to final state
+            break;
+        case STATE_HUG_RIGHT:
+            // State to hug the right for sharp right turns
+            KP = 20;
+            KD = 17;
+            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = -200;
+            stateCount ++;
+            // sm->currentState = STATE_FINAL;  // Transition to final state
+            break;
+        case STATE_BEAR_HUG_LEFT:
+            // State to hug the left for minor left turns
+            KP = 20;
+            KD = 5;
+            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = 200;
+            stateCount ++;
+            // sm->currentState = STATE_FINAL;  // Transition to final state
+            break;
+        case STATE_BEAR_HUG_RIGHT:
+            // State to hug the right for minor right turns
+            KP = 20;
+            KD = 5;
+            MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = -200;
+            stateCount ++;
+            // sm->currentState = STATE_FINAL;  // Transition to final state
+            break;
+        default:
+            printf("Invalid State\n");
+            break;
+    }
 }

@@ -317,15 +317,15 @@ void stateTransition() {
         case STATE_CIRCLE:
             // State to go around the right side of the circle
             KP = 20;
-            KD = 5;
+            KD = 15;
             MIN_SPEED = -200;
             SET_SPEED = 245;
             MAX_SPEED = 245;
             defaultError = -200;
             stateCount ++;
-            readLeftWeight = 1;
-            readMiddleWeight = -1;
-            readRightWeight = 1;
+            readLeftWeight = 0;
+            readMiddleWeight = 1;
+            readRightWeight = -1;
             break;
         default:
             printf("Invalid State\n");

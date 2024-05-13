@@ -239,7 +239,7 @@ void stateTransition() {
     }
 
     // IMPORTANT TODO: remove this part below
-    currentState = STATE_CIRCLE;
+    // currentState = STATE_CIRCLE;
   
     switch (currentState) {
         case STATE_STRAIGHT:

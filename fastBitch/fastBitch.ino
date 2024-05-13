@@ -26,7 +26,8 @@ typedef enum {
     STATE_HUG_LEFT,
     STATE_HUG_RIGHT,
     STATE_BEAR_HUG_LEFT,
-    STATE_BEAR_HUG_RIGHT
+    STATE_BEAR_HUG_RIGHT,
+    STATE_BEAR_BEAR_HUG_LEFT,
 } State;
 
 // Define state machine structure
@@ -38,6 +39,9 @@ int MIN_SPEED;
 int SET_SPEED;
 int MAX_SPEED;
 int defaultError;
+int readLeftWeight = 1;
+int readMiddleWeight = 0;
+int readRightWeight = -1;
 
 void setup()
 {
@@ -181,7 +185,7 @@ void PID(int left, int middle, int right) {
     }*/
 
     // favor right state
-    error = left - right; // TODO: Ummm I removed the ghost variables here to weigh the different values but it works, so may need to remove unused variables later on
+    error = readLeftWeight * left + readMiddleWeight * middle + readRightWeight * right; // TODO: Ummm I removed the ghost variables here to weigh the different values but it works, so may need to remove unused variables later on
   }
 
   int adjust = error*KP - KD*(error - lastError);
@@ -212,11 +216,13 @@ void stateTransition() {
 
     if (runSecondHalf) {
       // This is the second half of the course
-      // IMPORTANT TODO: update these times
-      if (currentTime - startTime > 27000) {
-        currentState = STATE_HUG_RIGHT;
-      } else if (currentTime - startTime > 25500) {
-        currentState = STATE_BEAR_HUG_LEFT;
+      // IMPORTANT TODO: add staight before the circle
+      if (currentTime - startTime > 7000) {
+      // IMPORTANT TODO: put circle state here
+      } else if (currentTime - startTime > 2000) {
+        currentState = STATE_BEAR_HUG_RIGHT;
+      } else if (currentTime - startTime > 1000) {
+        currentState = STATE_BEAR_BEAR_HUG_LEFT;
       }
     } else {
       // This is the start of the match code
@@ -292,6 +298,16 @@ void stateTransition() {
             SET_SPEED = 255;
             MAX_SPEED = 255;
             defaultError = -200;
+            stateCount ++;
+            break;
+        case STATE_BEAR_BEAR_HUG_LEFT:
+            // State to hug the left for minor left turns
+            KP = 20;
+            KD = 5;
+            MIN_SPEED = -200;
+            SET_SPEED = 245;
+            MAX_SPEED = 245;
+            defaultError = 100;
             stateCount ++;
             break;
         default:

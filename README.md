@@ -1,1 +1,1 @@
-This repo is for a simple line following robot built in 2.678. Hopefully, you are reading this because we made our code public after the competition and available for fellow MITers to develop and make better!
+Repo for 2.678 at MIT. We got 3rd in our line following competition. If you use this repo please release your code for future years to make it better. Progress is key!!! I updated issues with what we should have done differently.

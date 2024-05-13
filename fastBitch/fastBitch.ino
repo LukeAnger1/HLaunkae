@@ -22,10 +22,13 @@ const int black_threshold = 800; // if it is more than this threshold it is blac
 // Define states
 typedef enum {
     STATE_STRAIGHT,
+    STATE_STRAIGHT_WITH_COUNTING,
     STATE_HUG_LEFT,
     STATE_HUG_RIGHT,
     STATE_BEAR_HUG_LEFT,
-    STATE_BEAR_HUG_RIGHT
+    STATE_BEAR_HUG_RIGHT,
+    STATE_BEAR_BEAR_HUG_LEFT,
+    STATE_CIRCLE
 } State;
 
 // Define state machine structure
@@ -37,9 +40,9 @@ int MIN_SPEED;
 int SET_SPEED;
 int MAX_SPEED;
 int defaultError;
-
-
-
+int readLeftWeight = 1;
+int readMiddleWeight = 0;
+int readRightWeight = -1;
 
 void setup()
 {
@@ -150,6 +153,10 @@ void simpleLineFollow(int left, int middle, int right) {
 // This is used for the derivative in PID
 int lastError = 0;
 
+// This keeps track of how many white we hit when driving
+bool wasPreviousWhite = false;
+int whiteCount = 0;
+
 void PID(int left, int middle, int right) {
 
   // This will constrain the readings
@@ -161,8 +168,14 @@ void PID(int left, int middle, int right) {
   int error;
   if (left == white_threshold && right == white_threshold) {
     error = defaultError; // IMPORTANT TODO: favor right
-  } else {
 
+    // This code counts how many white sections we have encountered while going straight, it is used to reset the clock counter to prevent cascading errors
+    if (currentState == STATE_STRAIGHT_WITH_COUNTING && !wasPreviousWhite) {
+      wasPreviousWhite = true;
+      whiteCount++;
+    }
+  } else {
+    wasPreviousWhite = false;
     // TODO: this set the sign of the middle in value function, test it out
     // NOTE: this may be backwards sign notation
     /*int middle_sign = -1;
@@ -173,7 +186,7 @@ void PID(int left, int middle, int right) {
     }*/
 
     // favor right state
-    error = left - right; // TODO: Ummm I removed the ghost variables here to weigh the different values but it works, so may need to remove unused variables later on
+    error = readLeftWeight * left + readMiddleWeight * middle + readRightWeight * right; // TODO: Ummm I removed the ghost variables here to weigh the different values but it works, so may need to remove unused variables later on
   }
 
   int adjust = error*KP - KD*(error - lastError);
@@ -188,36 +201,74 @@ void PID(int left, int middle, int right) {
 
 unsigned long startTime = millis();
 
+// This variable says if we should run the second half of the course
+bool runSecondHalf = false;
+
 // This is state machine code
 void stateTransition() {
     // This changes states based off the time
     unsigned long currentTime = millis();
-    if (currentTime - startTime > 27000) {
-      currentState = STATE_HUG_RIGHT;
-    } else if (currentTime - startTime > 25500) {
-      currentState = STATE_BEAR_HUG_LEFT;
-    } else if (currentTime - startTime > 22000) {
-      currentState = STATE_STRAIGHT;
-    } else if (currentTime - startTime > 17000) {
-      currentState = STATE_BEAR_HUG_RIGHT;
-    } else if (currentTime - startTime > 10000) {
-      currentState = STATE_STRAIGHT;
-    } else {
-      currentState = STATE_HUG_RIGHT;
+
+    // This will reset the startTime, it will also make sure we run the second half
+    if (!runSecondHalf && whiteCount >= 2) {
+      runSecondHalf = true;
+      startTime = millis();
     }
+
+    if (runSecondHalf) {
+      // This is the second half of the course
+      // IMPORTANT TODO: add staight before the circle
+      if (currentTime - startTime > 10000) {
+        currentState = STATE_CIRCLE;
+      } else if (currentTime - startTime > 2000) {
+        currentState = STATE_BEAR_HUG_RIGHT;
+      } else if (currentTime - startTime > 1000) {
+        currentState = STATE_BEAR_BEAR_HUG_LEFT;
+      }
+    } else {
+      // This is the start of the match code
+      if (currentTime - startTime > 23000) {
+        currentState = STATE_STRAIGHT_WITH_COUNTING;
+      } else if (currentTime - startTime > 18000) {
+        currentState = STATE_BEAR_HUG_RIGHT;
+      } else if (currentTime - startTime > 10000) {
+        currentState = STATE_STRAIGHT;
+      } else {
+        currentState = STATE_HUG_RIGHT;
+      }
+    }
+
+    // IMPORTANT TODO: remove this part below
+    // currentState = STATE_CIRCLE;
   
     switch (currentState) {
         case STATE_STRAIGHT:
             // Straight state logic
             KP = 20; // This variable dictates how much to correct
-            KD = 18; // This is the derivative to make turning more smooth, but right now it isnt used correctly so may need to remove
+            KD = 19; // This is the derivative to make turning more smooth, but right now it isnt used correctly so may need to remove
             // Speed information in example on https://www.arduino.cc/reference/en/language/functions/analog-io/analogwrite/
             // 0-255 for write value, 0 - 1023 for read value
             MIN_SPEED = 0; // IMPORTANT NOTE: this helps control how fast can turn, the lower the more the turn
             SET_SPEED = 255; // This is the goal speed
             MAX_SPEED = 255; // This is the max speed
             defaultError = 0; // This is what to do when there is only white, really good for sharp turns
+            readLeftWeight = 1;
+            readMiddleWeight = 0;
+            readRightWeight = -1;
             stateCount ++; // This is to count how many state transitions have taken place, currently not used
+            break;
+        case STATE_STRAIGHT_WITH_COUNTING:
+            // Straight with counting logic
+            KP = 20;
+            KD = 18;
+            MIN_SPEED = 0;
+            SET_SPEED = 255;
+            MAX_SPEED = 255;
+            defaultError = 0;
+            readLeftWeight = 1;
+            readMiddleWeight = 0;
+            readRightWeight = -1;
+            stateCount ++;
             break;
         case STATE_HUG_LEFT:
             // State to hug the left for sharp left turns
@@ -227,6 +278,9 @@ void stateTransition() {
             SET_SPEED = 255;
             MAX_SPEED = 255;
             defaultError = 200;
+            readLeftWeight = 1;
+            readMiddleWeight = 0;
+            readRightWeight = -1;
             stateCount ++;
             break;
         case STATE_HUG_RIGHT:
@@ -237,6 +291,9 @@ void stateTransition() {
             SET_SPEED = 255;
             MAX_SPEED = 255;
             defaultError = -200;
+            readLeftWeight = 1;
+            readMiddleWeight = 0;
+            readRightWeight = -1;
             stateCount ++;
             break;
         case STATE_BEAR_HUG_LEFT:
@@ -247,6 +304,9 @@ void stateTransition() {
             SET_SPEED = 255;
             MAX_SPEED = 255;
             defaultError = 200;
+            readLeftWeight = 1;
+            readMiddleWeight = 0;
+            readRightWeight = -1;
             stateCount ++;
             break;
         case STATE_BEAR_HUG_RIGHT:
@@ -257,7 +317,36 @@ void stateTransition() {
             SET_SPEED = 255;
             MAX_SPEED = 255;
             defaultError = -200;
+            readLeftWeight = 1;
+            readMiddleWeight = 0;
+            readRightWeight = -1;
             stateCount ++;
+            break;
+        case STATE_BEAR_BEAR_HUG_LEFT:
+            // State go slower for harder turns
+            KP = 20;
+            KD = 5;
+            MIN_SPEED = -200;
+            SET_SPEED = 245;
+            MAX_SPEED = 245;
+            defaultError = 100;
+            readLeftWeight = 1;
+            readMiddleWeight = 0;
+            readRightWeight = -1;
+            stateCount ++;
+            break;
+        case STATE_CIRCLE:
+            // State to go around the right side of the circle
+            KP = 20;
+            KD = 15;
+            MIN_SPEED = -200;
+            SET_SPEED = 180;
+            MAX_SPEED = 180;
+            defaultError = -200;
+            stateCount ++;
+            readLeftWeight = 0;
+            readMiddleWeight = 1;
+            readRightWeight = -1;
             break;
         default:
             printf("Invalid State\n");

@@ -28,6 +28,7 @@ typedef enum {
     STATE_BEAR_HUG_LEFT,
     STATE_BEAR_HUG_RIGHT,
     STATE_BEAR_BEAR_HUG_LEFT,
+    STATE_CIRCLE
 } State;
 
 // Define state machine structure
@@ -217,8 +218,8 @@ void stateTransition() {
     if (runSecondHalf) {
       // This is the second half of the course
       // IMPORTANT TODO: add staight before the circle
-      if (currentTime - startTime > 7000) {
-      // IMPORTANT TODO: put circle state here
+      if (currentTime - startTime > 12000) {
+        currentState = STATE_CIRCLE;
       } else if (currentTime - startTime > 2000) {
         currentState = STATE_BEAR_HUG_RIGHT;
       } else if (currentTime - startTime > 1000) {
@@ -236,6 +237,9 @@ void stateTransition() {
         currentState = STATE_HUG_RIGHT;
       }
     }
+
+    // IMPORTANT TODO: remove this part below
+    currentState = STATE_CIRCLE;
   
     switch (currentState) {
         case STATE_STRAIGHT:
@@ -301,7 +305,7 @@ void stateTransition() {
             stateCount ++;
             break;
         case STATE_BEAR_BEAR_HUG_LEFT:
-            // State to hug the left for minor left turns
+            // State go slower for harder turns
             KP = 20;
             KD = 5;
             MIN_SPEED = -200;
@@ -309,6 +313,19 @@ void stateTransition() {
             MAX_SPEED = 245;
             defaultError = 100;
             stateCount ++;
+            break;
+        case STATE_CIRCLE:
+            // State to go around the right side of the circle
+            KP = 20;
+            KD = 5;
+            MIN_SPEED = -200;
+            SET_SPEED = 245;
+            MAX_SPEED = 245;
+            defaultError = -200;
+            stateCount ++;
+            readLeftWeight = 1;
+            readMiddleWeight = -1;
+            readRightWeight = 1;
             break;
         default:
             printf("Invalid State\n");

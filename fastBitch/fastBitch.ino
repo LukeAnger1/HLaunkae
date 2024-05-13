@@ -11,7 +11,7 @@ const int BIN1 =7; // Pololu drive B
 const int BIN2 =6;
 const int PWMB =5;
 
-const int LeftSensor = A5;// sensors looking from the robots perspective
+const int LeftSensor = A5; // sensors looking from the robots perspective
 const int MiddleSensor = A6;
 const int RightSensor = A7;
 
@@ -20,6 +20,8 @@ const int threshold = 450; // This is the threshold hold for digital
 const int black_threshold = 800; // if it is more than this threshold it is black
 
 // Define states
+// NOTE: Our robot works by defining states that have optimized variables for passing obstacles on the course
+// TODO: currently time and a counter to reset time. This can be better, see issue tracker in repo
 typedef enum {
     STATE_STRAIGHT,
     STATE_STRAIGHT_WITH_COUNTING,
@@ -59,13 +61,13 @@ void setup()
 
   Serial.begin(9600); // open the serial port at 9600 bps:
 
-currentState = STATE_STRAIGHT;
+currentState = STATE_STRAIGHT; // This is the initial state for the robot
 }
 void loop()
 {
   // put your main code here, to run repeatedly:
 
-  int leftValue = analogRead(LeftSensor);
+  int leftValue = analogRead(LeftSensor); // retreive sensor values
   int middleValue = analogRead(MiddleSensor);
   int rightValue = analogRead(RightSensor);
 
@@ -143,7 +145,8 @@ void simpleLineFollow(int left, int middle, int right) {
   int b = 2;
   int c = 100;
  
-// This is the value function
+  // This is the value function
+  // NOTE: This is good starter code but it slows down dependent on the value, so sub optimal
   int rightMotor = c + a*middle + b*left;
   int leftMotor = c + a*middle + b*right;
 
@@ -154,12 +157,14 @@ void simpleLineFollow(int left, int middle, int right) {
 int lastError = 0;
 
 // This keeps track of how many white we hit when driving
+// NOTE: This will switch states, I like these conditions that  whertake the course into account to know when to switch states, it is better
 bool wasPreviousWhite = false;
 int whiteCount = 0;
 
 void PID(int left, int middle, int right) {
 
   // This will constrain the readings
+  // NOTE: These constraints allow confidence in a value being black or white
   left = constrain(left, white_threshold, black_threshold);
   middle = constrain(middle, white_threshold, black_threshold);
   right = constrain(right, white_threshold, black_threshold);
@@ -167,7 +172,8 @@ void PID(int left, int middle, int right) {
   // TODO: change this if to be more efficient
   int error;
   if (left == white_threshold && right == white_threshold) {
-    error = defaultError; // IMPORTANT TODO: favor right
+    error = defaultError; // NOTE: This conditional is essential for our robot, as it switches states this is the conditional to do if it cant read anything
+    // EXAMPLE: hard rights can be performed by turning right when there no line to follow
 
     // This code counts how many white sections we have encountered while going straight, it is used to reset the clock counter to prevent cascading errors
     if (currentState == STATE_STRAIGHT_WITH_COUNTING && !wasPreviousWhite) {
@@ -176,26 +182,19 @@ void PID(int left, int middle, int right) {
     }
   } else {
     wasPreviousWhite = false;
-    // TODO: this set the sign of the middle in value function, test it out
-    // NOTE: this may be backwards sign notation
-    /*int middle_sign = -1;
-    if (left > right) {
-      middle_sign = -1;
-    } else {
-      middle_sign = 1;
-    }*/
 
     // favor right state
-    error = readLeftWeight * left + readMiddleWeight * middle + readRightWeight * right; // TODO: Ummm I removed the ghost variables here to weigh the different values but it works, so may need to remove unused variables later on
+    error = readLeftWeight * left + readMiddleWeight * middle + readRightWeight * right;
   }
 
   int adjust = error*KP - KD*(error - lastError);
 
-  // TODO: I commented this out but it is working alot better now, so I need to remove alot of variables
+  // NOTE: This techniquely isn't PID because the error isnt getting updated, but the robot runs smoother and faster without this
   // Record the current error for the next iteration
   // lastError = error;
 
-  // Adjust motors, one negatively and one positivelya
+  // Adjust motors, one negatively and one positively
+  // NOTE: We have to constrain the readings to prevent issues such as driving backwards or attempting to drive beyond max speed
   drive(constrain(SET_SPEED - adjust, MIN_SPEED, MAX_SPEED), constrain(SET_SPEED + adjust, MIN_SPEED, MAX_SPEED));
 }
 
@@ -217,7 +216,6 @@ void stateTransition() {
 
     if (runSecondHalf) {
       // This is the second half of the course
-      // IMPORTANT TODO: add staight before the circle
       if (currentTime - startTime > 10000) {
         currentState = STATE_CIRCLE;
       } else if (currentTime - startTime > 2000) {
@@ -238,7 +236,7 @@ void stateTransition() {
       }
     }
 
-    // IMPORTANT TODO: remove this part below
+    // NOTE: This is a spot to test states, it will override the state machine
     // currentState = STATE_CIRCLE;
   
     switch (currentState) {
@@ -252,7 +250,7 @@ void stateTransition() {
             SET_SPEED = 255; // This is the goal speed
             MAX_SPEED = 255; // This is the max speed
             defaultError = 0; // This is what to do when there is only white, really good for sharp turns
-            readLeftWeight = 1;
+            readLeftWeight = 1; // There is an error function that weights the sensors based off of these three values
             readMiddleWeight = 0;
             readRightWeight = -1;
             stateCount ++; // This is to count how many state transitions have taken place, currently not used
@@ -271,7 +269,7 @@ void stateTransition() {
             stateCount ++;
             break;
         case STATE_HUG_LEFT:
-            // State to hug the left for sharp left turns
+            // State to hug the left for minor left turns
             KP = 20;
             KD = 17;
             MIN_SPEED = 0;
@@ -284,7 +282,7 @@ void stateTransition() {
             stateCount ++;
             break;
         case STATE_HUG_RIGHT:
-            // State to hug the right for sharp right turns
+            // State to hug the right for minor right turns
             KP = 20;
             KD = 17;
             MIN_SPEED = 0;
@@ -297,7 +295,7 @@ void stateTransition() {
             stateCount ++;
             break;
         case STATE_BEAR_HUG_LEFT:
-            // State to hug the left for minor left turns
+            // State to hug the left for sharp left turns
             KP = 20;
             KD = 5;
             MIN_SPEED = 0;
@@ -310,7 +308,7 @@ void stateTransition() {
             stateCount ++;
             break;
         case STATE_BEAR_HUG_RIGHT:
-            // State to hug the right for minor right turns
+            // State to hug the right for sharp right turns
             KP = 20;
             KD = 5;
             MIN_SPEED = 0;
@@ -323,7 +321,7 @@ void stateTransition() {
             stateCount ++;
             break;
         case STATE_BEAR_BEAR_HUG_LEFT:
-            // State go slower for harder turns
+            // State go slower for super sharp left turns
             KP = 20;
             KD = 5;
             MIN_SPEED = -200;
@@ -337,6 +335,8 @@ void stateTransition() {
             break;
         case STATE_CIRCLE:
             // State to go around the right side of the circle
+            // NOTE: I never finished this code. The robot finished with this state once. I dont know how and I said FUCK it it worked.
+            // IMPORTANT NOTE: I still got a shirt
             KP = 20;
             KD = 15;
             MIN_SPEED = -200;
@@ -349,6 +349,7 @@ void stateTransition() {
             readRightWeight = -1;
             break;
         default:
+            // WTF Are you running?!?
             printf("Invalid State\n");
             break;
     }
